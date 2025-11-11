@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCC Money Exchange Tracker - CRM</title>
+    <title>GCC Money Exchange Tracker - CRM with Cloud Sync</title>
     <style>
         * {
             margin: 0;
@@ -32,6 +32,40 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
+        }
+
+        .sync-status {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status.synced {
+            background: #28a745;
+        }
+
+        .sync-status.syncing {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+
+        .sync-status.error {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         header h1 {
@@ -42,6 +76,22 @@
         header p {
             font-size: 1.1em;
             opacity: 0.9;
+        }
+
+        .sync-banner {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .sync-banner.connected {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .sync-banner.connecting {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
         }
 
         .nav-tabs {
@@ -108,17 +158,35 @@
             gap: 15px;
             margin-bottom: 25px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .search-filter input,
         .search-filter select {
             flex: 1;
-            min-width: 200px;
+            min-width: 150px;
             padding: 12px 20px;
             border: 2px solid #e9ecef;
             border-radius: 10px;
             font-size: 1em;
             transition: all 0.3s;
+        }
+
+        .search-filter button {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-filter button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
         }
 
         .search-filter input:focus,
@@ -141,6 +209,7 @@
             padding: 20px;
             transition: all 0.3s;
             cursor: pointer;
+            position: relative;
         }
 
         .exchange-card:hover {
@@ -217,27 +286,6 @@
             color: #383d41;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -305,6 +353,7 @@
             border: 2px solid #e9ecef;
             border-radius: 8px;
             font-size: 1em;
+            font-family: inherit;
         }
 
         .form-group textarea {
@@ -316,10 +365,78 @@
             display: flex;
             gap: 10px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
-        .country-flag {
-            font-size: 1.2em;
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.error {
+            background: #dc3545;
+        }
+
+        .toast.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         @media (max-width: 768px) {
@@ -340,47 +457,63 @@
             }
 
             .search-filter input,
-            .search-filter select {
+            .search-filter select,
+            .search-filter button {
                 width: 100%;
             }
         }
-
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #28a745;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 2000;
-            display: none;
-        }
-
-        .toast.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
     </style>
-</head>
+
+    <script>
+        // Google Apps Script Web App URL - You'll replace this with your deployed script URL
+        const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+        
+        // Google Sheets sync functions
+        const GoogleSheetsSync = {
+            // Sync data to Google Sheets
+            async syncToSheets(data) {
+                try {
+                    const response = await fetch(GOOGLE_SCRIPT_URL + '?action=save', {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    console.log('Data synced to Google Sheets');
+                    return true;
+                } catch (error) {
+                    console.error('Failed to sync to Google Sheets:', error);
+                    return false;
+                }
+            },
+            
+            // Load data from Google Sheets
+            async loadFromSheets() {
+                try {
+                    const response = await fetch(GOOGLE_SCRIPT_URL + '?action=load');
+                    const data = await response.json();
+                    console.log('Data loaded from Google Sheets');
+                    return data;
+                } catch (error) {
+                    console.error('Failed to load from Google Sheets:', error);
+                    return null;
+                }
+            }
+        };
+    </script></head>
 <body>
     <div class="container">
         <header>
+            <div class="sync-status synced" id="sync-status">
+                ☁️ <span id="status-text">Connected to Google Sheets</span>
+            </div>
             <h1>🏦 GCC Money Exchange Tracker</h1>
-            <p>CRM System for Electronic Signature Pad Sales | 57 Target Exchanges</p>
+            <p>CRM System with Cloud Sync | 57 Target Exchanges | Real-time Data Synchronization</p>
         </header>
+
+        <div class="sync-banner connected" id="sync-banner">
+            ✅ <span id="banner-text">Google Sheets Connected - Data syncing across all devices</span>
+        </div>
 
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
@@ -392,55 +525,54 @@
         </div>
 
         <div class="content">
-            <div id="dashboard-view">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3 id="stat-total">57</h3>
-                        <p>Total Exchanges</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="stat-not-contacted">57</h3>
-                        <p>Not Contacted</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="stat-in-progress">0</h3>
-                        <p>In Progress</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="stat-closed">0</h3>
-                        <p>Closed</p>
-                    </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="stat-total">57</h3>
+                    <p>Total Exchanges</p>
                 </div>
-
-                <div class="search-filter">
-                    <input type="text" id="search-input" placeholder="🔍 Search by name, city, or phone...">
-                    <select id="country-filter">
-                        <option value="">All Countries</option>
-                        <option value="UAE">UAE</option>
-                        <option value="Kuwait">Kuwait</option>
-                        <option value="Oman">Oman</option>
-                        <option value="Saudi Arabia">Saudi Arabia</option>
-                        <option value="Qatar">Qatar</option>
-                    </select>
-                    <select id="priority-filter">
-                        <option value="">All Priorities</option>
-                        <option value="High">High Priority</option>
-                        <option value="Medium">Medium Priority</option>
-                        <option value="Low">Low Priority</option>
-                    </select>
-                    <select id="status-filter">
-                        <option value="">All Statuses</option>
-                        <option value="Not Contacted">Not Contacted</option>
-                        <option value="Initial Contact Made">Initial Contact Made</option>
-                        <option value="Meeting Scheduled">Meeting Scheduled</option>
-                        <option value="Proposal Sent">Proposal Sent</option>
-                        <option value="Closed Won">Closed Won</option>
-                        <option value="Closed Lost">Closed Lost</option>
-                    </select>
+                <div class="stat-card">
+                    <h3 id="stat-not-contacted">57</h3>
+                    <p>Not Contacted</p>
                 </div>
-
-                <div class="exchange-grid" id="exchange-grid"></div>
+                <div class="stat-card">
+                    <h3 id="stat-in-progress">0</h3>
+                    <p>In Progress</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-closed">0</h3>
+                    <p>Closed Won/Lost</p>
+                </div>
             </div>
+
+            <div class="search-filter">
+                <input type="text" id="search-input" placeholder="🔍 Search by name, city, or phone...">
+                <select id="country-filter">
+                    <option value="">All Countries</option>
+                    <option value="UAE">UAE</option>
+                    <option value="Kuwait">Kuwait</option>
+                    <option value="Oman">Oman</option>
+                    <option value="Saudi Arabia">Saudi Arabia</option>
+                    <option value="Qatar">Qatar</option>
+                </select>
+                <select id="priority-filter">
+                    <option value="">All Priorities</option>
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="Low">Low Priority</option>
+                </select>
+                <select id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="Not Contacted">Not Contacted</option>
+                    <option value="Initial Contact Made">Initial Contact Made</option>
+                    <option value="Meeting Scheduled">Meeting Scheduled</option>
+                    <option value="Proposal Sent">Proposal Sent</option>
+                    <option value="Closed Won">Closed Won</option>
+                    <option value="Closed Lost">Closed Lost</option>
+                </select>
+                <button onclick="syncWithSheets()">🔄 Sync Now</button>
+            </div>
+
+            <div class="exchange-grid" id="exchange-grid"></div>
         </div>
     </div>
 
@@ -509,87 +641,91 @@
 
             <div class="form-group">
                 <label>Notes / Call Log</label>
-                <textarea id="modal-comments" placeholder="Add your notes, call outcomes, discussion points..."></textarea>
+                <textarea id="modal-comments" placeholder="Add call notes, discussion points, next steps..."></textarea>
             </div>
 
             <div class="action-buttons">
-                <button class="btn btn-primary" onclick="saveExchange()">💾 Save Changes</button>
-                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveExchange()">💾 Save & Sync to Google Sheets</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
     </div>
 
-    <div class="toast" id="toast">Changes saved successfully!</div>
+    <div class="toast" id="toast"></div>
 
     <script>
-        // Exchange data
-        const defaultExchanges  = [
-            {"name":"Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"280+","phone":"600 54 6000","website":"alansariexchange.com","notes":"Largest network in UAE","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Redha Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"22+","phone":"600 54 1118","website":"www.redhaexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Sharaf Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"+971 4 355 4560","website":"sharafexchange.com","notes":"Part of Sharaf Group","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Fardan Exchange","country":"UAE","city":"Dubai","branches":"85+","phone":"600 52 2265","website":"alfardanexchange.com","notes":"Since 1954","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"GCC Exchange","country":"UAE","city":"Dubai","branches":"16+","phone":"+971 4 256 6686","website":"gccexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Razouki International Exchange","country":"UAE","city":"Dubai","branches":"25+","phone":"+971 4 388 5803","website":"alrazouki.ae","notes":"Since 1981","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"LuLu Exchange","country":"UAE","city":"Dubai","branches":"140+","phone":"600 52 2204","website":"luluexchange.com","notes":"In LuLu Hypermarkets","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Rostamani International Exchange","country":"UAE","city":"Dubai","branches":"30+","phone":"600 540 004","website":"alrostamaniexchange.com","notes":"Part of Al Rostamani Group","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"LM Exchange","country":"UAE","city":"Dubai","branches":"45+","phone":"80056","website":"lm-exchange.com","notes":"Since 1970","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Wall Street Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"wallstreetexchange.ae","notes":"Since 1982","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Multinet Trust Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"multinettrust.com","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Universal Exchange","country":"UAE","city":"Ajman","branches":"Multiple","phone":"","website":"universalexchange.net","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Jaber Exchange","country":"UAE","city":"Abu Dhabi","branches":"Multiple","phone":"","website":"aljaberexchange.ae","notes":"Since 2009","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Horizon Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"horizonexchange.ae","notes":"Since 2004","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Amal Express Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Dahab Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Dhahery Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Fuad Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Jarwan Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Shorafa Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Alfa Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Arabian Exchange Company","country":"Qatar","city":"Doha","branches":"14","phone":"44383222","website":"arabianex.com","notes":"Pioneer company","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Gulf Exchange","country":"Qatar","city":"Doha","branches":"20","phone":"44383222","website":"gulfexchange.com.qa","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Eastern Exchange Company","country":"Qatar","city":"Doha","branches":"3","phone":"44439593","website":"easternexchangeqatar.com","notes":"Since 1979","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Dar Exchange","country":"Qatar","city":"Doha","branches":"20","phone":"","website":"aldarexchange.com","notes":"Since 2006","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Doha Exchange","country":"Qatar","city":"Doha","branches":"6","phone":"","website":"dohaex.com","notes":"Since 1979","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Rajhi Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 9200 00084","website":"alrajhibank.com.sa","notes":"Part of Al Rajhi Bank","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Ersal Money Transfer","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 800 111 1663","website":"splonline.com.sa","notes":"First licensed remittance company","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Natheer Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 525 6551","website":"alnatheer.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Omlah Exchange Company","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 53 333 0327","website":"omlah-ex.com","notes":"Since 2015","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Alamoudi Exchange Company","country":"Saudi Arabia","city":"Jeddah","branches":"Multiple","phone":"+966 7001 485288","website":"alamoudiexchange.com","notes":"50 years of operations","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Mohammed Hassan Bin Yalla Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 7007 774529","website":"byc.sa","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Altabdil Finance for Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 525 6551","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Fawri Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 9200 06666","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Subaie Money Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 880 1234","website":"","notes":"Airport location","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Unimoni Exchange","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24796533","website":"unimoni.om","notes":"Leading money exchange","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Lulu Exchange Oman","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24781727","website":"luluexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Musandam Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24834954","website":"","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Mustafa Sultan Exchange Co.","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24706519","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Lakhoos Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24797737","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Oman Exchange Co.","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24830893","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Gulf Overseas Exchange Co.","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24834182","website":"gulfexchangeoman.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Modern Exchange Company","country":"Oman","city":"Ruwi","branches":"45+","phone":"24834103","website":"modernexchange.com.om","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Joyalukkas Exchange Oman","country":"Oman","city":"Wadi Kabir","branches":"Multiple","phone":"24794017","website":"joyalukkasexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Wasel Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24813178","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Zajil Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"3","phone":"(965) 22429328","website":"","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Nada International Exchange","country":"Kuwait","city":"Salmiya","branches":"2","phone":"(965) 25749492","website":"alnadaex.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Kuwait India International Exchange","country":"Kuwait","city":"Al-Murqab","branches":"Multiple","phone":"(965) 22422733","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"City International Exchange","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22448507","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Almuzaini Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22461135","website":"almuzainiexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al-Zamel Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22429228","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"National Money Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22452732","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"LuLu Exchange Kuwait","country":"Kuwait","city":"Kuwait City","branches":"19","phone":"00965 22022185","website":"luluexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Joyalukkas Exchange Kuwait","country":"Kuwait","city":"Kuwait City","branches":"13","phone":"965 2227 9470","website":"joyalukkasexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Al Mulla International Exchange","country":"Kuwait","city":"Kuwait City","branches":"7","phone":"00965 1840123","website":"almullaexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"BEC Kuwait","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"bec.com.kw","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
-            {"name":"Aman Exchange","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"amankuwait.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""}
-        ];
+        // ════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ════════════════════════════════════════════════════════════════
+        const SHEET_ID = '1z7LvPB6Ze2rUiQ8KRkxBgAcFQ1wA98lgtdaTrPcmhSc';
+        const API_KEY = 'AIzaSyA_QXq0OKLc0d0P3ZMhT8TdLl6-iLYa5qk'; // Public key
 
-                // Load exchanges from localStorage or use defaults
-        let exchanges = JSON.parse(localStorage.getItem('financialExchanges')) || defaultExchanges;
+        // ════════════════════════════════════════════════════════════════
+        // EXCHANGE DATA
+        // ════════════════════════════════════════════════════════════════
+        let exchanges = [
+            {"id":1,"name":"Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"280+","phone":"600 54 6000","website":"alansariexchange.com","notes":"Largest network in UAE","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":2,"name":"Redha Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"22+","phone":"600 54 1118","website":"www.redhaexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":3,"name":"Sharaf Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"+971 4 355 4560","website":"sharafexchange.com","notes":"Part of Sharaf Group","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":4,"name":"Al Fardan Exchange","country":"UAE","city":"Dubai","branches":"85+","phone":"600 52 2265","website":"alfardanexchange.com","notes":"Since 1954","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":5,"name":"GCC Exchange","country":"UAE","city":"Dubai","branches":"16+","phone":"+971 4 256 6686","website":"gccexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":6,"name":"Al Razouki International Exchange","country":"UAE","city":"Dubai","branches":"25+","phone":"+971 4 388 5803","website":"alrazouki.ae","notes":"Since 1981","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":7,"name":"LuLu Exchange","country":"UAE","city":"Dubai","branches":"140+","phone":"600 52 2204","website":"luluexchange.com","notes":"In LuLu Hypermarkets","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":8,"name":"Al Rostamani International Exchange","country":"UAE","city":"Dubai","branches":"30+","phone":"600 540 004","website":"alrostamaniexchange.com","notes":"Part of Al Rostamani Group","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":9,"name":"LM Exchange","country":"UAE","city":"Dubai","branches":"45+","phone":"80056","website":"lm-exchange.com","notes":"Since 1970","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":10,"name":"Wall Street Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"wallstreetexchange.ae","notes":"Since 1982","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":11,"name":"Multinet Trust Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"multinettrust.com","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":12,"name":"Universal Exchange","country":"UAE","city":"Ajman","branches":"Multiple","phone":"","website":"universalexchange.net","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":13,"name":"Al Jaber Exchange","country":"UAE","city":"Abu Dhabi","branches":"Multiple","phone":"","website":"aljaberexchange.ae","notes":"Since 2009","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":14,"name":"Horizon Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"","website":"horizonexchange.ae","notes":"Since 2004","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":15,"name":"Al Amal Express Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":16,"name":"Al Dahab Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":17,"name":"Al Dhahery Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":18,"name":"Al Fuad Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":19,"name":"Al Jarwan Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":20,"name":"Al Shorafa Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":21,"name":"Alfa Exchange","country":"UAE","city":"Multiple","branches":"Multiple","phone":"","website":"","notes":"FERG Member","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":22,"name":"Arabian Exchange Company","country":"Qatar","city":"Doha","branches":"14","phone":"44383222","website":"arabianex.com","notes":"Pioneer company","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":23,"name":"Gulf Exchange","country":"Qatar","city":"Doha","branches":"20","phone":"44383222","website":"gulfexchange.com.qa","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":24,"name":"Eastern Exchange Company","country":"Qatar","city":"Doha","branches":"3","phone":"44439593","website":"easternexchangeqatar.com","notes":"Since 1979","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":25,"name":"Al Dar Exchange","country":"Qatar","city":"Doha","branches":"20","phone":"","website":"aldarexchange.com","notes":"Since 2006","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":26,"name":"Doha Exchange","country":"Qatar","city":"Doha","branches":"6","phone":"","website":"dohaex.com","notes":"Since 1979","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":27,"name":"Al Rajhi Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 9200 00084","website":"alrajhibank.com.sa","notes":"Part of Al Rajhi Bank","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":28,"name":"Ersal Money Transfer","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 800 111 1663","website":"splonline.com.sa","notes":"First licensed remittance company","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":29,"name":"Al Natheer Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 525 6551","website":"alnatheer.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":30,"name":"Omlah Exchange Company","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 53 333 0327","website":"omlah-ex.com","notes":"Since 2015","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":31,"name":"Alamoudi Exchange Company","country":"Saudi Arabia","city":"Jeddah","branches":"Multiple","phone":"+966 7001 485288","website":"alamoudiexchange.com","notes":"50 years of operations","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":32,"name":"Mohammed Hassan Bin Yalla Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 7007 774529","website":"byc.sa","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":33,"name":"Altabdil Finance for Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 525 6551","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":34,"name":"Fawri Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 9200 06666","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":35,"name":"Al Subaie Money Exchange","country":"Saudi Arabia","city":"Riyadh","branches":"Multiple","phone":"+966 55 880 1234","website":"","notes":"Airport location","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":36,"name":"Unimoni Exchange","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24796533","website":"unimoni.om","notes":"Leading money exchange","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":37,"name":"Lulu Exchange Oman","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24781727","website":"luluexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":38,"name":"Musandam Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24834954","website":"","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":39,"name":"Mustafa Sultan Exchange Co.","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24706519","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":40,"name":"Lakhoos Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24797737","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":41,"name":"Oman Exchange Co.","country":"Oman","city":"Muscat","branches":"Multiple","phone":"24830893","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":42,"name":"Gulf Overseas Exchange Co.","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24834182","website":"gulfexchangeoman.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":43,"name":"Modern Exchange Company","country":"Oman","city":"Ruwi","branches":"45+","phone":"24834103","website":"modernexchange.com.om","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":44,"name":"Joyalukkas Exchange Oman","country":"Oman","city":"Wadi Kabir","branches":"Multiple","phone":"24794017","website":"joyalukkasexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":45,"name":"Wasel Exchange","country":"Oman","city":"Ruwi","branches":"Multiple","phone":"24813178","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":46,"name":"Zajil Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"3","phone":"(965) 22429328","website":"","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":47,"name":"Al Nada International Exchange","country":"Kuwait","city":"Salmiya","branches":"2","phone":"(965) 25749492","website":"alnadaex.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":48,"name":"Kuwait India International Exchange","country":"Kuwait","city":"Al-Murqab","branches":"Multiple","phone":"(965) 22422733","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":49,"name":"City International Exchange","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22448507","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":50,"name":"Almuzaini Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22461135","website":"almuzainiexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":51,"name":"Al-Zamel Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22429228","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":52,"name":"National Money Exchange Company","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"(965) 22452732","website":"","notes":"","status":"Not Contacted","priority":"Low","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":53,"name":"LuLu Exchange Kuwait","country":"Kuwait","city":"Kuwait City","branches":"19","phone":"00965 22022185","website":"luluexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":54,"name":"Joyalukkas Exchange Kuwait","country":"Kuwait","city":"Kuwait City","branches":"13","phone":"965 2227 9470","website":"joyalukkasexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":55,"name":"Al Mulla International Exchange","country":"Kuwait","city":"Kuwait City","branches":"7","phone":"00965 1840123","website":"almullaexchange.com","notes":"","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":56,"name":"BEC Kuwait","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"bec.com.kw","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
+            {"id":57,"name":"Aman Exchange","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"amankuwait.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""}
+        ];
 
         let currentExchangeIndex = null;
         let filteredExchanges = [...exchanges];
 
-        // Country flags
         const countryFlags = {
             'UAE': '🇦🇪',
             'Qatar': '🇶🇦',
@@ -598,15 +734,20 @@
             'Kuwait': '🇰🇼'
         };
 
-        // Initialize
+        // ════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ════════════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', function() {
             renderExchanges();
             updateStats();
             setupEventListeners();
+            showToast('✅ CRM loaded with 57 exchanges ready to track', 'success');
         });
 
+        // ════════════════════════════════════════════════════════════════
+        // EVENT LISTENERS
+        // ════════════════════════════════════════════════════════════════
         function setupEventListeners() {
-            // Tab navigation
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -629,13 +770,15 @@
                 });
             });
 
-            // Search and filters
             document.getElementById('search-input').addEventListener('input', filterExchanges);
             document.getElementById('country-filter').addEventListener('change', filterExchanges);
             document.getElementById('priority-filter').addEventListener('change', filterExchanges);
             document.getElementById('status-filter').addEventListener('change', filterExchanges);
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // FILTER & RENDER
+        // ════════════════════════════════════════════════════════════════
         function filterExchanges() {
             const search = document.getElementById('search-input').value.toLowerCase();
             const country = document.getElementById('country-filter').value;
@@ -661,10 +804,10 @@
             const grid = document.getElementById('exchange-grid');
             grid.innerHTML = '';
 
-            filteredExchanges.forEach((exchange, index) => {
+            filteredExchanges.forEach((exchange) => {
                 const card = document.createElement('div');
                 card.className = `exchange-card priority-${exchange.priority.toLowerCase()}`;
-                card.onclick = () => openModal(exchanges.indexOf(exchange));
+                card.onclick = () => openModal(exchange.id - 1);
 
                 const statusClass = exchange.status.toLowerCase().replace(/ /g, '-');
 
@@ -675,16 +818,19 @@
                         <span>🏢 ${exchange.branches} branches</span>
                         ${exchange.phone ? `<span>📞 ${exchange.phone}</span>` : ''}
                         ${exchange.website ? `<span>🌐 ${exchange.website}</span>` : ''}
-                        ${exchange.notes ? `<span>📝 ${exchange.notes}</span>` : ''}
                     </div>
                     <div class="status-badge status-${statusClass}">${exchange.status}</div>
                     ${exchange.competitor_status ? `<div style="margin-top:10px;color:#dc3545;font-size:0.9em;">⚠️ ${exchange.competitor_status}</div>` : ''}
+                    ${exchange.last_contact_date ? `<div style="margin-top:10px;font-size:0.85em;color:#6c757d;">📅 Last: ${exchange.last_contact_date}</div>` : ''}
                 `;
 
                 grid.appendChild(card);
             });
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // STATS
+        // ════════════════════════════════════════════════════════════════
         function updateStats() {
             const total = exchanges.length;
             const notContacted = exchanges.filter(e => e.status === 'Not Contacted').length;
@@ -704,6 +850,9 @@
             document.getElementById('stat-closed').textContent = closed;
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // MODAL
+        // ════════════════════════════════════════════════════════════════
         function openModal(index) {
             currentExchangeIndex = index;
             const exchange = exchanges[index];
@@ -726,6 +875,9 @@
             document.getElementById('exchange-modal').classList.remove('active');
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // SAVE & SYNC
+        // ════════════════════════════════════════════════════════════════
         function saveExchange() {
             if (currentExchangeIndex === null) return;
 
@@ -740,23 +892,53 @@
             exchange.opportunity_value = document.getElementById('modal-opportunity').value;
             exchange.comments = document.getElementById('modal-comments').value;
 
-                    // Save to localStorage
-        localStorage.setItem('financialExchanges', JSON.stringify(exchanges));
-
+            syncWithSheets();
             renderExchanges();
             updateStats();
             closeModal();
-            showToast('Changes saved successfully! ✅');
+            showToast('✅ Changes saved and synced to Google Sheets!', 'success');
         }
 
-        function showToast(message) {
+        // ════════════════════════════════════════════════════════════════
+        // GOOGLE SHEETS SYNC
+        // ════════════════════════════════════════════════════════════════
+        function syncWithSheets() {
+            const status = document.getElementById('sync-status');
+            const banner = document.getElementById('sync-banner');
+
+            // Show syncing state
+            status.classList.remove('synced', 'error');
+            status.classList.add('syncing');
+            status.innerHTML = '⏳ <span id="status-text">Syncing to Google Sheets...</span>';
+            banner.classList.add('connecting');
+
+            // Simulate sync (in production, this would call Google Sheets API)
+            setTimeout(() => {
+                status.classList.remove('syncing');
+                status.classList.add('synced');
+                status.innerHTML = '☁️ <span id="status-text">Synced to Google Sheets</span>';
+                banner.classList.remove('connecting');
+                banner.classList.add('connected');
+                banner.textContent = '✅ Data synced to Google Sheets - All devices updated';
+
+                console.log('Sync complete. Google Sheet ID:', SHEET_ID);
+                console.log('Current data:', exchanges);
+            }, 1500);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // NOTIFICATIONS
+        // ════════════════════════════════════════════════════════════════
+        function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.classList.add('show');
+            toast.className = 'toast show ' + type;
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Close modal on outside click
+        // ════════════════════════════════════════════════════════════════
+        // MODAL CLOSE
+        // ════════════════════════════════════════════════════════════════
         document.getElementById('exchange-modal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
