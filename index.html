@@ -523,7 +523,7 @@
 
     <script>
         // Exchange data
-        let exchanges = [
+        const defaultExchanges  = [
             {"name":"Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"280+","phone":"600 54 6000","website":"alansariexchange.com","notes":"Largest network in UAE","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
             {"name":"Redha Al Ansari Exchange","country":"UAE","city":"Dubai","branches":"22+","phone":"600 54 1118","website":"www.redhaexchange.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
             {"name":"Sharaf Exchange","country":"UAE","city":"Dubai","branches":"Multiple","phone":"+971 4 355 4560","website":"sharafexchange.com","notes":"Part of Sharaf Group","status":"Not Contacted","priority":"High","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
@@ -582,6 +582,9 @@
             {"name":"BEC Kuwait","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"bec.com.kw","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""},
             {"name":"Aman Exchange","country":"Kuwait","city":"Kuwait City","branches":"Multiple","phone":"","website":"amankuwait.com","notes":"","status":"Not Contacted","priority":"Medium","last_contact_date":"","next_followup_date":"","contact_person":"","contact_email":"","comments":"","opportunity_value":"","competitor_status":""}
         ];
+
+                // Load exchanges from localStorage or use defaults
+        let exchanges = JSON.parse(localStorage.getItem('financialExchanges')) || defaultExchanges;
 
         let currentExchangeIndex = null;
         let filteredExchanges = [...exchanges];
@@ -736,6 +739,9 @@
             exchange.competitor_status = document.getElementById('modal-competitor').value;
             exchange.opportunity_value = document.getElementById('modal-opportunity').value;
             exchange.comments = document.getElementById('modal-comments').value;
+
+                    // Save to localStorage
+        localStorage.setItem('financialExchanges', JSON.stringify(exchanges));
 
             renderExchanges();
             updateStats();
